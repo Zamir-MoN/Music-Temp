@@ -12,20 +12,51 @@ from config import COOKIES_FILE, DOWNLOAD_API_BASE, SEARCH_API_URL
 logger = logging.getLogger(__name__)
 
 
-async def fetch_youtube_link(query):
+def _search_via_ytdlp(query):
+    ydl_opts = {
+        "format": "bestaudio/best",
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "extract_flat": True
+    }
     try:
-        async with aiohttp.ClientSession() as session:
-            url = f"{SEARCH_API_URL}/search?q={urllib.parse.quote(query)}"
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    if isinstance(data, dict):
-                        return data
-                    if isinstance(data, list) and data:
-                        return data[0]
-        return None
-    except Exception:
-        return None
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch5:{query}", download=False)
+            if 'entries' in info and len(info['entries']) > 0:
+                results = []
+                for entry in info['entries']:
+                    results.append({
+                        "title": entry.get("title"),
+                        "url": entry.get("url"),
+                        "id": entry.get("id"),
+                        "duration": f"{entry.get('duration', 0) // 60}:{str(entry.get('duration', 0) % 60).zfill(2)}" if entry.get("duration") else "--:--",
+                        "thumbnail": entry.get("thumbnails", [{}])[-1].get("url") if entry.get("thumbnails") else ""
+                    })
+                return results
+    except Exception as e:
+        logger.warning(f"yt-dlp search failed: {e}")
+    return None
+
+async def fetch_youtube_link(query):
+    if SEARCH_API_URL:
+        try:
+            async with aiohttp.ClientSession() as session:
+                url = f"{SEARCH_API_URL}/search?q={urllib.parse.quote(query)}"
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if isinstance(data, dict):
+                            return data
+                        if isinstance(data, list) and data:
+                            return data
+        except Exception as e:
+            logger.warning(f"Search API failed: {e}")
+    
+    # Fallback to yt-dlp
+    logger.info("Falling back to yt-dlp for search")
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _search_via_ytdlp, query)
 
 
 async def _download_via_api(youtube_url):

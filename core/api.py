@@ -100,6 +100,7 @@ def _yt_download(youtube_url, output_template):
         "no_warnings": True,
         "noplaylist": True,
         "extractor_args": {"youtube": ["player_client=android,web"]},
+        "proxy": "socks5://127.0.0.1:9050", # Use Tor to bypass IP block
     }
     if COOKIES_FILE and os.path.exists(COOKIES_FILE):
         ydl_opts["cookiefile"] = COOKIES_FILE

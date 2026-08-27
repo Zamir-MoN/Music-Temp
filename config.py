@@ -1,5 +1,4 @@
 import os
-import random
 
 SEARCH_API_URL = os.getenv("SEARCH_API_URL", "")
 DOWNLOAD_API_BASE = os.getenv("DOWNLOAD_API_BASE", "").rstrip("/")
@@ -10,4 +9,4 @@ SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "90563749653249088e20
 RATE_LIMIT_COUNT = 4
 RATE_LIMIT_WINDOW = 6
 MAX_TITLE_LEN = 30
-PORT = int(os.getenv("PORT", str(random.randint(10000, 60000))))
+PORT = int(os.getenv("PORT", "5585"))

@@ -94,16 +94,11 @@ async def _download_via_api(youtube_url):
 
 def _yt_download(youtube_url, output_template):
     ydl_opts = {
-        "format": "bestaudio/best",
+        "format": "m4a/bestaudio/best",
         "outtmpl": output_template,
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
-        "postprocessors": [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-            "preferredquality": "192",
-        }],
     }
     if COOKIES_FILE and os.path.exists(COOKIES_FILE):
         ydl_opts["cookiefile"] = COOKIES_FILE

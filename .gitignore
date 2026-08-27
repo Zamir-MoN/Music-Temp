@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+downloads/
+.env
+cookies.txt.bak
+spotify_dump.html
+yt_dump.json
+.cache/

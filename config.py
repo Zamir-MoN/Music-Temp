@@ -1,12 +1,8 @@
 import os
+from dotenv import load_dotenv
 
-SEARCH_API_URL = os.getenv("SEARCH_API_URL", "")
-DOWNLOAD_API_BASE = os.getenv("DOWNLOAD_API_BASE", "").rstrip("/")
-COOKIES_FILE = os.getenv("COOKIES_FILE", "cookies.txt")
-YOUTUBE_COOKIES = os.getenv("YOUTUBE_COOKIES", "")
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID", "eeec997034c54695ab0ad44b903cd3df")
-SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "90563749653249088e20ea4409d057e1")
-RATE_LIMIT_COUNT = 4
-RATE_LIMIT_WINDOW = 6
-MAX_TITLE_LEN = 30
+load_dotenv()
+
+HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "5585"))
+PROXY = os.getenv("PROXY", "")

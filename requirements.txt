@@ -1,7 +1,4 @@
-aiohttp
-python-dotenv
-aiofiles
-yt-dlp
 fastapi
 uvicorn
-spotipy
+yt-dlp
+python-dotenv

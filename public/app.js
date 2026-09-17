@@ -21,14 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBarFill = document.getElementById('progressBarFill');
     const currentTimeEl = document.getElementById('currentTime');
     const totalTimeEl = document.getElementById('totalTime');
-    const volumeSlider = document.getElementById('volumeSlider');
-    const volumeFill = document.getElementById('volumeFill');
 
-    // Queue State
+    // State
     let queue = [];
     let currentIndex = -1;
 
-    // Search functionality
+    // Search event listeners
     searchBtn.addEventListener('click', performSearch);
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') performSearch();
@@ -38,6 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
         queue = [];
         currentIndex = -1;
         renderQueue();
+        audioPlayer.pause();
+        audioPlayer.src = '';
+        playerTitle.textContent = 'No track selected';
+        playerArtist.textContent = 'Search to play';
+        playerThumb.src = 'https://via.placeholder.com/60';
+        playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
     });
 
     async function performSearch() {
@@ -49,30 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingIndicator.classList.remove('hidden');
 
         try {
-            // Check if it's a Spotify Playlist
-            if (query.includes('spotify.com/playlist/')) {
-                const response = await fetch(`/api/playlist?url=${encodeURIComponent(query)}`);
-                const json = await response.json();
-                
-                if (json.status === 'success' && json.data.length > 0) {
-                    // Add all to queue
-                    const startIdx = queue.length;
-                    queue.push(...json.data);
-                    renderQueue();
-                    
-                    if (currentIndex === -1) {
-                        currentIndex = startIdx;
-                        playQueueItem(currentIndex);
-                    }
-                    
-                    loadingIndicator.classList.add('hidden');
-                    welcomeState.classList.remove('hidden');
-                    welcomeState.innerHTML = '<i class="fa-solid fa-check-circle" style="color:#10b981; font-size:4rem; margin-bottom:1rem;"></i><h2>Playlist Added!</h2><p>Added ' + json.data.length + ' tracks to the queue.</p>';
-                    return;
-                }
-            }
-
-            // Normal Search
             const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
             const json = await response.json();
 
@@ -100,12 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'track-card';
             
-            // Reformat for queue
             const trackObj = {
                 title: track.title || 'Unknown Title',
-                artist: track.artist || 'YouTube Audio',
+                artist: 'YouTube Music',
                 thumbnail: track.thumbnail || 'https://via.placeholder.com/200',
-                query: track.link || track.url // If it's a direct result, the query is just the link
+                url: track.url || `https://www.youtube.com/watch?v=${track.id}`
             };
             
             card.innerHTML = `
@@ -177,8 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     window.removeFromQueue = function(idx) {
         queue.splice(idx, 1);
-        if (currentIndex > idx) currentIndex--;
-        else if (currentIndex === idx) {
+        if (currentIndex > idx) {
+            currentIndex--;
+        } else if (currentIndex === idx) {
             if (queue.length > 0) {
                 if (currentIndex >= queue.length) currentIndex = 0;
                 playQueueItem(currentIndex);
@@ -188,6 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 audioPlayer.src = '';
                 playerTitle.textContent = 'No track selected';
                 playerArtist.textContent = 'Search to play';
+                playerThumb.src = 'https://via.placeholder.com/60';
+                playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
             }
         }
         renderQueue();
@@ -204,25 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
         playPauseBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         
         try {
-            let streamUrl = track.query;
-            // If it's a Spotify text query, resolve to youtube link first
-            if (!streamUrl.includes('youtube.com') && !streamUrl.includes('youtu.be')) {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(track.query)}`);
-                const json = await response.json();
-                if (json.status === 'success' && json.data) {
-                    const found = Array.isArray(json.data) ? json.data[0] : json.data;
-                    streamUrl = found.link || found.url;
-                } else {
-                    throw new Error("Could not find song on YouTube");
-                }
-            }
-            
-            // Initiate stream download/playback
-            audioPlayer.src = `/api/stream?url=${encodeURIComponent(streamUrl)}`;
+            audioPlayer.src = `/api/stream?url=${encodeURIComponent(track.url)}`;
             audioPlayer.play();
         } catch (error) {
             console.error('Playback error:', error);
-            // Skip to next if failed
             playNext();
         }
     }
@@ -233,12 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderQueue();
             playQueueItem(currentIndex);
         } else {
-            // End of queue
             playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
         }
     }
 
-    // Audio Event Listeners
+    // Audio Player Events
     audioPlayer.addEventListener('play', () => {
         playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
     });
@@ -255,9 +221,9 @@ document.addEventListener('DOMContentLoaded', () => {
         playNext();
     });
     
-    // Add skip next/prev buttons listeners
+    // Skip next / prev buttons
     const controlBtns = document.querySelectorAll('.control-btn');
-    if(controlBtns.length >= 3) {
+    if (controlBtns.length >= 3) {
         controlBtns[0].addEventListener('click', () => {
             if (currentIndex > 0) {
                 currentIndex--;
@@ -280,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Progress bar click
+    // Progress bar seek
     progressBarBg.addEventListener('click', (e) => {
         if (!audioPlayer.src || !audioPlayer.duration) return;
         const rect = progressBarBg.getBoundingClientRect();
@@ -288,17 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
         audioPlayer.currentTime = pos * audioPlayer.duration;
     });
 
-    // Volume slider click
-    volumeSlider.addEventListener('click', (e) => {
-        const rect = volumeSlider.getBoundingClientRect();
-        const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        audioPlayer.volume = pos;
-        volumeFill.style.width = `${pos * 100}%`;
-    });
-
     function updateProgress() {
         const { currentTime, duration } = audioPlayer;
-        if (isNaN(duration)) return;
+        if (isNaN(duration) || duration <= 0) return;
         
         const progressPercent = (currentTime / duration) * 100;
         progressBarFill.style.width = `${progressPercent}%`;
@@ -306,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatTime(seconds) {
-        if (isNaN(seconds)) return '0:00';
+        if (isNaN(seconds) || seconds <= 0) return '0:00';
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
         return `${m}:${s < 10 ? '0' : ''}${s}`;
